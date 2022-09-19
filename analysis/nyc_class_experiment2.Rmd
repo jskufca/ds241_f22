@@ -1,0 +1,181 @@
+---
+title: "NYC Flights"
+author: "Coach Skufca"
+date: "2022-09-09"
+output: html_notebook
+---
+
+Class play with NYC flights data.
+
+## Load Packages
+
+```{r}
+library(nycflights13)
+library(tidyverse)
+library(here)
+library(janitor)
+```
+
+## Load flight data
+
+Load the NYC 2013 flight data as `df`.
+
+```{r}
+df1=flights
+```
+
+## Class work
+
+In class, we first looked at flights to MIAMI, creating a barplot.
+
+
+```{r}
+df6=df1 %>% 
+  filter(dest=="MIA")
+
+
+df6 %>% ggplot(aes(month)) + geom_bar()
+```
+Analyzing the graph above we note:
+
+* December has the most flights, perhaps due to holiday.
+* Feb is low, perhaps due to fewer days in Feb.
+* Flight numbers seem to correlate with days in the month.
+
+
+### Other destinations
+
+We are interested in whether the Miami pattern is replicated at other airports. 
+We consider six major airport:
+
+* LAX - Los Angeles
+* SAN - San Diego
+* SFO - San Francisco
+* ATL - Atlanta
+* ORD - Chicago O'hare
+* MIA - Miami
+
+```{r}
+df7=df1 %>% 
+  filter(dest %in% c("LAX","SAN","SFO","ATL","ORD","MIA"))
+
+
+df7 %>% ggplot(aes(x=month,fill=dest)) + geom_bar()
+```
+The stacked bar chart looks pretty, but we can't really compare the pattern across locations.   We will use *faceting* to separate the plots.
+
+```{r}
+
+df7 %>% ggplot(aes(month,fill=dest)) + geom_bar()+facet_wrap(~dest)
+```
+Observation from above graph:
+
+* San Diego is much smaller than the others.
+* MIA is _unusually_ flat.
+* ORD is summer intensive (more traffic over summer)
+* ORD, LAX, SFO patterns similar: low in winter, high in summer.
+* ATL is flat, perhaps it's a hub.
+* Feb is low (fewer days) and winter.
+
+# Homework
+
+## Another source of data - Bureau of Transportation
+
+We will access a much larger data source, with WAY more data, should we want.  But ... we first focus on a particular download goal to get some data which is similar to what we were using.
+
+## YOUR ACTION REQUIRED
+ 
+Go to website  https://www.transtats.bts.gov/DL_SelectFields.aspx?gnoyr_VQ=FIM&QO_fu146_anzr=Nv4%20Pn44vr45 .  This dataset allows access to information on domestic flight and domestic carriers, with monthly summary data.
+
+
+I want you to download the data for 2019, selecting all fields for download.
+
+
+![Plot title. ](nyc_class_experiment2_insertimage_1.png)
+
+> Save the download to your data_raw directory. It will be a zipfile, but that will be OK.  Don't change the name of the zipfile.
+
+
+## Load the BOT data
+
+We take advantage of the `here` package to get the path to the file that we stored.
+
+Load that data into dataframe called `df2019` using the read_csv command.   Note that you do not need to unzip the file.
+
+**NOTE** I use `clean_names` from the janitor package to get names formatted in a consistent and useable way.
+
+```{r}
+thisfile=here("data_raw","DL_SelectFields.zip")
+
+df2019=read_csv(thisfile) %>% clean_names()
+```
+
+## Subsetting to data of interest
+
+Let's focus on flights from La Guardia (airport "LGA") and eliminate cargo flights by requiring at leat 1 passenger.
+
+Call the resultant dataframe `df9`.
+
+```{r}
+df9=df2019 %>% filter(passengers>0,origin=="LGA")
+
+```
+
+We create a barchart as we have done before:
+
+```{r}
+df9 %>% ggplot(aes(month)) + geom_bar()
+```
+By default, `geom_bar` is counting the number of rows, where we asked it to visualize the count by `month`.  
+
+** Take a look at the dataset and discover why counting rows is not going to give us a count of flights. **
+
+The visualization we want is:
+
+```{r}
+df9 %>% ggplot(aes(month)) + geom_bar(aes(weight=departures_performed))
+```
+Make some observations about this plot.
+
+
+### A new visualization
+
+Can you make a boxplot where the bar height is based on the number of passengers riding each month.
+
+```{r}
+
+df9 %>% ggplot(aes(month)) + geom_bar(aes(weight=passengers))
+```
+
+
+### Just because you can
+
+
+Here is pretty, but not so useful plot.
+
+```{r}
+df9 %>% ggplot(aes(month,fill=carrier_name)) + geom_bar(aes(weight=departures_performed))
+```
+
+
+
+
+## Arrivals and departures from LGA
+
+```{r}
+df10=df2019 %>% filter(passengers>0,origin=="LGA" | dest=="LGA")
+
+df10 %>% ggplot(aes(month)) + geom_bar(aes(weight=passengers))
+```
+
+```{r}
+df11=df10 %>% select(month,passengers,seats, carrier_name, dest, origin)
+
+df12=df10 %>% select(1:5, month, contains("id") )
+
+df13=df11 %>% mutate(percent_loading = passengers/seats*100)
+
+df13 %>% ggplot(aes(percent_loading)) +
+  geom_histogram()+facet_wrap(~carrier_name,scales="free_y")
+
+```

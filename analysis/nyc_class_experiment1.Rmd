@@ -1,0 +1,134 @@
+---
+title: "NYC Flights"
+author: "Coach Skufca"
+date: "2022-09-09"
+output: html_notebook
+---
+
+Class play with NYC flights data.
+
+## Load Packages
+
+```{r}
+library(nycflights13)
+library(tidyverse)
+library(here)
+library(janitor)
+```
+
+## Load flight data
+
+```{r}
+df1=flights
+
+
+```
+
+## Class work
+
+```{r}
+df2=df1 %>% 
+  filter(origin=="MIA",month==9)
+```
+
+
+```{r}
+df3=df1 %>% 
+  filter(dest=="MIA",month==9)
+```
+
+```{r}
+df4=df1 %>% 
+  filter(dest=="MIA",month==1)
+```
+
+```{r}
+df5=df1 %>% 
+  filter(dest=="MIA",month==7)
+```
+
+
+```{r}
+df6=df1 %>% 
+  filter(dest=="MIA")
+
+
+df6 %>% ggplot(aes(month)) + geom_bar()
+```
+Analyzing the graph above we note:
+
+* December has the most flights, perhaps due to holiday.
+* Feb is low, perhaps due to fewer days in Feb.
+* Flight numbers seem to correlate with days in the month.
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+df7=df1 %>% 
+  filter(dest %in% c("LAX","SAN","SFO","ATL","ORD","MIA"))
+
+
+df7 %>% ggplot(aes(x=month,fill=dest)) + geom_bar()
+```
+
+
+```{r}
+
+df7 %>% ggplot(aes(month,fill=dest)) + geom_bar()+facet_wrap(~dest)
+```
+Observation from above graph:
+
+* San Diego is much smaller than the others.
+* MIA is _unusually_ flat.
+* ORD is summer intensive (more traffic over summer)
+* ORD, LAX, SFO patterns similar: low in winter, high in summer.
+* ATL is flat, perhaps it's a hub.
+* Feb is low (fewer days) and winter.
+
+
+
+
+
+
+
+```{r}
+thisfile=here("data_raw","DL_SelectFields.zip")
+
+df2019=read_csv(thisfile) %>% clean_names()
+```
+
+```{r}
+df9=df2019 %>% filter(passengers>0,origin=="LGA")
+
+df9 %>% ggplot(aes(month)) + geom_bar()
+```
+
+```{r}
+df9=df2019 %>% filter(passengers>0,origin=="LGA")
+
+
+df9 %>% ggplot(aes(month)) + geom_bar(aes(weight=departures_performed))
+```
+
+```{r}
+df9=df2019 %>% filter(passengers>0,origin=="LGA"|dest=="LGA")
+
+df9 %>% ggplot(aes(month)) + geom_bar(aes(weight=passengers))
+```
+
+
+```{r}
+df9=df2019 %>% filter(passengers>0,origin=="LGA")
+
+df9 %>% ggplot(aes(month)) + geom_bar(aes(weight=departures_performed))
+```
