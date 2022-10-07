@@ -5,80 +5,18 @@ date: "2022-09-09"
 output: html_notebook
 ---
 
-Class play with NYC flights data.
-
-Experiment 3 includes summarizing, looking to match another report.
+Time series forecasting.
 
 
 ## Load Packages
 
 ```{r}
-library(nycflights13)
 library(tidyverse)
 library(here)
 library(janitor)
 ```
 
-## Load flight data
 
-Load the NYC 2013 flight data as `df`.
-
-```{r}
-df1=flights
-```
-
-## Class work
-
-In class, we first looked at flights to MIAMI, creating a barplot.
-
-
-```{r}
-df6=df1 %>% 
-  filter(dest=="MIA")
-
-
-df6 %>% ggplot(aes(month)) + geom_bar()
-```
-Analyzing the graph above we note:
-
-* December has the most flights, perhaps due to holiday.
-* Feb is low, perhaps due to fewer days in Feb.
-* Flight numbers seem to correlate with days in the month.
-
-
-### Other destinations
-
-We are interested in whether the Miami pattern is replicated at other airports. 
-We consider six major airport:
-
-* LAX - Los Angeles
-* SAN - San Diego
-* SFO - San Francisco
-* ATL - Atlanta
-* ORD - Chicago O'hare
-* MIA - Miami
-
-```{r}
-df7=df1 %>% 
-  filter(dest %in% c("LAX","SAN","SFO","ATL","ORD","MIA"))
-
-
-df7 %>% ggplot(aes(x=month,fill=dest)) + geom_bar()
-```
-The stacked bar chart looks pretty, but we can't really compare the pattern across locations.   We will use *faceting* to separate the plots.
-
-```{r}
-
-df7 %>% ggplot(aes(month,fill=dest)) + geom_bar()+facet_wrap(~dest)
-```
-Observation from above graph:
-
-* San Diego is much smaller than the others.
-* MIA is _unusually_ flat.
-* ORD is summer intensive (more traffic over summer)
-* ORD, LAX, SFO patterns similar: low in winter, high in summer.
-* ATL is flat, perhaps it's a hub.
-* Feb is low (fewer days) and winter.
 
 # Homework
 
@@ -185,7 +123,8 @@ df15=df2019 %>% filter(passengers>0,origin=="LGA" | dest=="LGA") %>%
   mutate(average_pass_per_flight=total_pass/num_flights)
 
 
-df15
+df15 
+df15 
 ```
 
 
@@ -231,3 +170,86 @@ df17=df2019 %>% filter(origin_city_name=="New York, NY" ) %>%
   summarise(freight=sum(freight,na.rm = FALSE),passengers=sum(passengers),n=n()) 
 df17
 ```
+
+
+
+## time series
+
+```{r}
+t=0:20
+y=2.5*t+rnorm(n=21)
+
+dft=tibble(t,y)
+```
+
+
+```{r}
+dft %>% ggplot(aes(t,y))+geom_point()
+```
+```{r}
+lm(y~t,data=dft) %>% summary()
+```
+
+```{r}
+dft_1=dft %>% mutate(yd=lag(y)) %>% relocate(yd,.before = y)
+```
+
+```{r}
+lm(y~yd,data=dft_1) %>% summary()
+```
+
+```{r}
+dft_2=dft_1 %>% mutate(yd2=lag(yd)) %>% relocate(yd2,.before = y)
+lm(y~yd+yd2,data=dft_2) %>% summary()
+```
+
+## expontential growth
+
+
+```{r}
+t=0:20
+y=exp(.2*t)+rnorm(n=21)
+
+dft=tibble(t,y)
+```
+
+
+```{r}
+dft %>% ggplot(aes(t,y))+geom_point()
+```
+```{r}
+lm(y~t,data=dft) %>% summary()
+```
+
+```{r}
+dft_1=dft %>% mutate(yd=lag(y)) %>% relocate(yd,.before = y)
+```
+
+```{r}
+lm(y~yd,data=dft_1) %>% summary()
+```
+
+```{r}
+dft_2=dft_1 %>% mutate(yd2=lag(yd)) %>% relocate(yd2,.before = y)
+lm(y~yd+yd2,data=dft_2) %>% summary()
+```
+
+
+```{r}
+library(forecast)
+
+```
+
+```{r}
+t=0:40
+y=2.5*t+rnorm(n=41)+10*sin(2*pi*t/20)
+tsdata=ts(y,start=0,frequency=5)
+```
+
+
+```{r}
+ddata <- decompose(tsdata, "multiplicative")
+
+plot(ddata)
+```
+

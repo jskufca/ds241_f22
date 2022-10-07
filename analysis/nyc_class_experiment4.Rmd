@@ -185,7 +185,8 @@ df15=df2019 %>% filter(passengers>0,origin=="LGA" | dest=="LGA") %>%
   mutate(average_pass_per_flight=total_pass/num_flights)
 
 
-df15
+df15 
+df15 
 ```
 
 

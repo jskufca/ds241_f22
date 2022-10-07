@@ -1,0 +1,35 @@
+---
+title: "MA132 Spring Enrollment Prediction"
+author: "Coach Skufca"
+date: "2022-10-05"
+output: html_notebook
+---
+
+Class play with MA132 data.
+
+## Load Packages
+
+```{r}
+
+library(tidyverse)
+library(here)
+library(janitor)
+
+```
+
+## Load  data
+
+```{r}
+myfile=here("data_raw","CU_ACAD_DEPT_WHEN_OFF_ENRL_22740.csv")
+df1=read_csv(myfile,skip=1) %>% clean_names()%>%
+  filter(component=="LEC") %>%
+  filter(catalog %in% c(131,132)) %>%
+  select(catalog,section,term,term2,title,tot_enrl)%>%
+  mutate(ay=round((term-4000)/10))
+  
+```
+
+```{r}
+file1
+```
+
