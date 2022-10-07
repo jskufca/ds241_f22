@@ -29,7 +29,45 @@ df1=read_csv(myfile,skip=1) %>% clean_names()%>%
   
 ```
 
+### create and store analysis dataframes
+
 ```{r}
-file1
+file1=here("data","ma132enr_df1")
+write_csv(df1,file1)
 ```
+
+Dataframe 2 will rearrange the data as needed.
+
+```{r}
+df2 = df1 %>% 
+  separate(term2,c("semester","year"),sep=" ",remove=FALSE) %>%
+  filter(semester != "Summer") %>% 
+  group_by(ay,term,semester,catalog) %>% summarise(tot_enrl=sum(tot_enrl)) %>%
+  ungroup()
+```
+
+
+## Visualize
+
+```{r}
+df2 %>% filter(catalog==132,semester=="Spring") %>%
+  ggplot(aes(ay,tot_enrl)) +geom_point()
+```
+
+### Widen the data
+
+
+```{r}
+df2w = df2 %>% pivot_wider(id_cols=ay,names_from = c(catalog,semester), values_from = tot_enrl)
+  
+  
+  
+ df2w %>%   ggplot(aes(`131_Fall`,`132_Spring`)) +geom_point()
+```
+
+
+
+
+
+
 
