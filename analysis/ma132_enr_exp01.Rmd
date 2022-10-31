@@ -62,9 +62,22 @@ df2w = df2 %>% pivot_wider(id_cols=ay,names_from = c(catalog,semester), values_f
   
   
   
- df2w %>%   ggplot(aes(`131_Fall`,`132_Spring`)) +geom_point()
+ df2w %>% filter(`132_Spring`>0) %>%   ggplot(aes(`131_Fall`,`132_Spring`)) +geom_point()
 ```
 
+```{r}
+df2c=df1 %>% distinct() %>%  
+  separate(term2,c("semester","year"),sep=" ",remove=FALSE) %>%
+  filter(semester != "Summer") %>% 
+  group_by(ay,term,semester,catalog) %>% summarise(tot_enrl=sum(tot_enrl)) %>%
+  ungroup()
+
+df2wc = df2c %>% pivot_wider(id_cols=ay,names_from = c(catalog,semester), values_from = tot_enrl)
+  
+  
+  
+ df2wc %>% filter(`132_Spring`>0) %>%   ggplot(aes(`131_Fall`,`132_Spring`)) +geom_point()
+```
 
 
 
