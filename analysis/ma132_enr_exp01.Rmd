@@ -72,15 +72,40 @@ df2c=df1 %>% distinct() %>%
   group_by(ay,term,semester,catalog) %>% summarise(tot_enrl=sum(tot_enrl)) %>%
   ungroup()
 
-df2wc = df2c %>% pivot_wider(id_cols=ay,names_from = c(catalog,semester), values_from = tot_enrl)
+df2wc = df2c %>% pivot_wider(id_cols=ay,names_from = c(catalog,semester), values_from = tot_enrl) 
   
   
   
  df2wc %>% filter(`132_Spring`>0) %>%   ggplot(aes(`131_Fall`,`132_Spring`)) +geom_point()
 ```
+### Modeling
+
+```{r}
+dfa=df2wc %>% clean_names()%>% slice(1:7)
+
+
+mdl1=lm(x132_spring~x131_fall,data=dfa)
+summary(mdl1)
+```
+
+```{r}
 
 
 
+mdl2=lm(x132_spring~x131_fall+x132_fall,data=dfa)
+summary(mdl2)
+```
 
+```{r}
+mdl3=lm(x132_spring~x131_fall+x132_fall+0,data=dfa)
+summary(mdl3)
+```
 
+```{r}
+plot(mdl1)
+```
+
+```{r}
+plot(mdl3)
+```
 

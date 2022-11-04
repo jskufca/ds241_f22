@@ -156,7 +156,7 @@ Now … let’s examine all the data for Sep 3rd. I simply need to drop in the d
 
 
 ```{r}
-dfb %>% filter(mday(started_at)==3) %>%
+dfb %>% filter(mday(started_at)==1) %>%
   select(start=started_at,end=ended_at) %>%
   pivot_longer(start:end, names_to="type",values_to="t") %>% arrange(t) %>%
   mutate(increment=case_when(
@@ -164,8 +164,7 @@ dfb %>% filter(mday(started_at)==3) %>%
    type=="end" ~ -1
   )) %>%
   mutate(riders=cumsum(increment)) %>% 
-  ggplot(aes(t,riders)) + geom_step() +
-  scale_x_datetime(limits=as_datetime(   c("2022-09-03","2022-09-04")))
+  ggplot(aes(t,riders)) + geom_step()
 ```
 
 
@@ -228,3 +227,19 @@ dfb %>%
 # facet_wrap(~wday(t,label = T),scales = "free_x",ncol = 7)
 ```
 
+```{r}
+dfb %>% 
+  filter(month(started_at)==9,month(ended_at)==9) %>%
+ select(member_casual,start=started_at,end=ended_at) %>%
+  pivot_longer(start:end, names_to="type",values_to="t") %>% arrange(t) %>%
+  mutate(increment=case_when(
+   type=="start"~1,
+   type=="end" ~ -1
+  )) %>%
+  group_by(member_casual) %>%
+  mutate(riders=cumsum(increment)) %>% filter(mday(t)<=30) %>%
+    ggplot(aes(t,riders,color=member_casual)) + geom_step() +
+  facet_wrap(~mday(t),scales = "free_x",ncol = 7)
+
+# facet_wrap(~wday(t,label = T),scales = "free_x",ncol = 7)
+```
