@@ -1,0 +1,52 @@
+---
+title: "Lab Support for Dennys - La Quinta Labs"
+author: "Coach Skufca"
+date: "2202-10-19"
+output: html_notebook
+---
+
+This notebook attempts Lab 4 of dsbox: https://datasciencebox.org/course-materials/lab-instructions/lab-04/lab-04-viz-sp-data.html , with a goal of preparing for class.
+
+### Packages
+
+```{r}
+library(tidyverse)
+library(dsbox)
+```
+
+### Experiment of point process
+
+Let's create fale data in an arbitrary, cartesian coordinate setting.
+
+
+6 hotels of type Q:
+
+```{r}
+n=6 
+dfq=tibble(type="Q",x=runif(n,0,2),y=runif(n,0,1))
+
+```
+
+20 restauratntes of type D:
+
+```{r}
+n=20 
+dfd=tibble(type="D",x=runif(n,0,2),y=runif(n,0,1))
+```
+
+Compute a full cross-join:
+
+```{r}
+df_x=full_join(dfq,dfd,by=as.character())
+```
+
+And also a contatenated data frame:
+
+```{r}
+dfc=bind_rows(dfq,dfd)
+```
+
+```{r}
+dfc %>% ggplot(aes(x,y,color=type))+geom_point()
+```
+

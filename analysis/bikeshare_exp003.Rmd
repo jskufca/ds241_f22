@@ -1,0 +1,45 @@
+---
+title: "Bikeshare data (exp003): Testing the GBFS system for Capital Area"
+author: "Coach Skufca"
+date: "2022-11-04"
+output: html_notebook
+---
+
+The goal of this notebook is to created use tje `gbfs` package to look at like data from capital bikeshare.
+
+
+
+
+## Load Packages
+
+```{r}
+library(tidyverse)
+library(here)
+library(janitor)
+library(lubridate)
+theme_set(theme_minimal())
+library(gbfs)
+```
+
+## Data Load
+
+Using guidance from https://github.com/simonpcouch/gbfs , we will grab some DC data and plot.
+
+```{r}
+df_cities=get_gbfs_cities()
+```
+
+
+Looking up in the df_cities list, I find capital bikeshare code as "cabi".
+
+```{r}
+cabi_free=get_free_bike_status("cabi")
+```
+```{r}
+cabi_free %>% ggplot(aes(x=lon,y=lat)) + geom_point()
+```
+
+```{r}
+get_free_bike_status("cabi")%>% ggplot(aes(x=lon,y=lat)) + geom_point()
+```
+

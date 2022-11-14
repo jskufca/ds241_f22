@@ -1,0 +1,233 @@
+---
+title: "Replacement Class - Cleaning up and Spatial Joins"
+date:  "2022-11-09"
+author: "Coach Skufca"
+output: html_notebook
+---
+
+This notebooks will help me talk through a bit of material regarding *spatial data*, 
+with some introduction to `spatial joins`.
+
+Key topics for today:
+
+* Using `sf` package
+* Using `tmap` package
+* Using `tidycensus` package
+* Reminder on joins (focus: left join)
+* Our Spatial Data
+   * Neighborhoods
+   * Joining with non-spatial data
+   * Census data
+   * Joining with spatial data
+* ignore html in git  (if time)
+
+## Packages
+
+Standards:
+
+```{r}
+library(knitr)
+library(tidyverse)
+library(janitor)
+library(lubridate) # because we will probably see some dates
+library(here) # a package I haven't taught you about before that doesn't do much, but ....
+```
+
+Some additional packages focused on today's work:
+
+```{r}
+library(sf) # working with simple features - geospatial
+library(tmap)
+library(tidycensus)
+
+```
+## Informational resources
+
+* An overall resource on mapping in R: https://bookdown.org/nicohahn/making_maps_with_r5/docs/introduction.html
+* A starting point to learn about `sf`:  https://r-spatial.github.io/sf/articles/
+* Getting started with `tmap`: https://cran.r-project.org/web/packages/tmap/vignettes/tmap-getstarted.html
+* The `tidycensus` package: https://walker-data.com/tidycensus/index.html
+* The book on `tidycensus` : https://walker-data.com/census-r/index.html
+
+
+## Using the Neighborhood Geospatial Data (using /data)
+
+
+Our first data source comes from opendata.dc
+
+https://opendata.dc.gov/datasets/DCGIS::dc-health-planning-neighborhoods/about
+
+
+I will use the GeoJSON file.  (Newer, not necessarily better, but ... a single file.  Not smaller, but ... this one is not big.)  
+
+
+
+
+Data is easily readable 
+```{r}
+neigh=st_read(here("data_raw","dc_neigh.geojson")) %>% clean_names()
+class(neigh)
+```
+
+```{r}
+plot(neigh)
+```
+
+
+
+## Reminder - Joins
+
+```{r}
+df1=tibble(fruit=c("apple","banana","cherry"),cost=c(1.5,1.2,2.25))
+df2=tibble(fruit=c("apple","apple","cherry","lemon"),
+           desert=c("pie","cobbler","cobbler","cheesecake"),
+           cal=c(400,430,500,550))
+df1
+```
+```{r}
+df2
+```
+```{r}
+left_join(df1,df2,by="fruit")
+```
+
+## Investigating joining spatial and non-spatial data
+
+
+Covid case information is available from opendatadc:
+
+https://opendata.dc.gov/datasets/DCGIS::dc-covid-19-total-positive-cases-by-neighborhood/about
+
+Read cases information:
+
+```{r message=FALSE, warning=FALSE}
+df_c=read_csv(here("data_raw","neighborhood_cases.csv")) %>% clean_names() 
+
+df_cases=df_c %>%
+  filter(as_date(date_reported) == "2022-02-22") %>% 
+  separate(neighborhood,into=c("code","name"),sep = ":") %>%
+  mutate(code=case_when(
+    code=="N35" ~"N0",
+    TRUE ~ code
+  )) %>%
+  select(-objectid,-date_reported)
+
+
+```
+
+
+## Regular joining (of dataframes)
+
+```{r}
+neigh2=left_join(neigh,df_cases,by=c("code")) 
+
+tmap_mode("view")
+
+tm_shape(neigh2) +tm_polygons("total_positives",alpha=.5)
+```
+
+
+## Joining with other spatial data
+
+Let's get some data using `tidycensus`.  Need an API key   https://api.census.gov/data/key_signup.html
+
+
+```{r}
+
+
+census_api_key("Insert your key here")
+
+#what variables
+v20 = load_variables(2018,"acs5")
+# median_family_income="	B06011_001" 
+# all "B00001_001"	
+#black "B02009_001"
+```
+
+
+Get some data:
+
+```{r}
+df_cencus=get_acs(geography = "tract",
+                  variables=c("median_inc"="B06011_001",
+                              "pop"="B01001_001",
+                              "pop_black"="B02009_001"),
+                  state="DC",geometry=TRUE,year=2018) 
+```
+
+```{r}
+class(df_cencus)
+plot(df_cencus)
+```
+It's in long format.  Let's make it wide.
+```{r}
+df_cens=df_cencus %>% select(-moe) %>% spread(variable,estimate) 
+
+tm_shape(df_cens) +tm_polygons("median_inc",alpha=.5)
+```
+
+
+```{r}
+
+  tm_shape(neigh2) +tm_borders(col="blue",lwd=5,alpha=.2)+
+  tm_shape(df_cens) +tm_borders(col="red",lwd=1,alpha=.3)
+```
+
+
+
+```{r}
+#<<<<<<< HEAD
+#df_j=st_join(df_cens,neigh2)
+#=======
+#df_j=st_join(df_cens,neigh2,prepared=FALSE)
+#>>>>>>> aaf01be5cf721819dd2df615aef7a1999bcec0c2
+```
+
+```{r}
+df_cens_adj=df_cens %>% st_transform(4326)
+```
+
+```{r}
+df_j=st_join(df_cens_adj,neigh2,largest=TRUE)
+```
+Other order?:
+
+```{r}
+#<<<<<<< HEAD
+##df_j_rev = st_join(neigh2,df_cens_adj,largest=TRUE)
+#=======
+#df_j_rev = st_join(neigh2,df_cens_adj,largest=TRUE)
+#>>>>>>> aaf01be5cf721819dd2df615aef7a1999bcec0c2
+```
+
+Since we want the geometry for the NEIGHBORHOODS, we need a to work a little harder:
+
+```{r}
+df1=df_j %>% select(median_inc,pop,pop_black,objectid) %>%
+  group_by(objectid) %>%
+  summarise(pop_n=sum(pop),
+            pop_black_n=sum(pop_black), 
+            adj_median_income=sum(pop*median_inc)/pop_n) 
+
+plot(df1)
+```
+
+```{r}
+df2=left_join(neigh2,df1)
+
+df2=left_join(neigh2,df1 %>% st_set_geometry(NULL))
+
+```
+
+```{r}
+df2=df2 %>% mutate(black_perc=pop_black_n/pop_n, covid_rate=total_positives/pop_n)
+tm_shape(df2)+tm_polygons(c("adj_median_income","covid_rate","black_perc"))
+```
+
+
+
+```{r}
+df2 %>% filter(objectid!=30) %>% tm_shape()+tm_polygons(c("adj_median_income","covid_rate","black_perc"),alpha=.4)
+```
+
+

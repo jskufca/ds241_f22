@@ -1,0 +1,103 @@
+---
+title: "Bikeshare data (exp002): Building cleaned Sept 2022 datasets"
+author: "Coach Skufca"
+date: "2022-09-09"
+output: html_notebook
+---
+
+The goal of this notebook is to created "cleaned" datasets to more easily support future analysis.
+
+We will:
+
+* Filter to only rides that start and end in September
+* Filter to rides of positive duration.
+* Filter to rides with duration less than 100 minutes, as we suspect that represents people who forgot (or failed) to properly "return" the bike.
+
+
+A prelimiary look at bikeshare data, focused on Sep 2022 data from DC bikeshare.
+
+Primary Data Source: https://s3.amazonaws.com/capitalbikeshare-data/index.html
+
+
+## Load Packages
+
+```{r}
+library(tidyverse)
+library(here)
+library(janitor)
+library(lubridate)
+theme_set(theme_minimal())
+```
+
+## Data Load
+
+```{r}
+myfile=here("data_raw","202209-capitalbikeshare-tripdata.zip")
+dfa=read_csv(myfile) %>% clean_names()
+```
+
+
+
+
+
+
+## Cleaning
+
+#### Add new variables.
+
+```{r}
+dfa1=dfa %>%   mutate(duration=as.numeric((ended_at-started_at)/60),
+         hour_of_day=hour(started_at),
+         day_of_week=wday(started_at,label = T))
+```
+
+
+
+#### Filter
+
+Filter as specified in goal.  We also rename two of the variables.
+
+```{r}
+dfb=dfa1 %>% 
+  filter(month(started_at)==9,month(ended_at)==9) %>%
+  filter(duration>0, duration<100) %>%
+  rename(start=started_at,end=ended_at)
+```
+
+
+## Storing
+
+We store as a `.csv` in our data directory.  Storing as csv make data transportable and shareable:
+
+```{r}
+cleaned_file=here("data","sep2202_bikes_cleaned.csv")
+write_csv(dfb,cleaned_file)
+```
+
+Let's check if it reads:
+
+```{r}
+dfb_read=read_csv(cleaned_file)
+```
+
+
+#### More efficient storage using R data structure
+
+`rds` is an internal-to-R compressed data format.
+
+```{r}
+rdsfile=here("data","sep2202_bikes_cleaned.rds")
+saveRDS(dfb,rdsfile)
+```
+
+Test on reading.
+
+```{r}
+dfb_rds=readRDS(rdsfile)
+```
+
+
+
+
+
+

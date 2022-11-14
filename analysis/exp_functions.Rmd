@@ -1,0 +1,91 @@
+---
+title: "A function experiment"
+output: html_notebook
+---
+
+Teaching the class about functions.
+
+
+## packages --- always the tidyverse
+```{r}
+library(tidyverse)
+```
+
+
+## Some concepts
+
+
+```{r}
+f01=function(x) {
+  y=x+1
+  y^2
+}
+
+
+f01(3)
+f01(5)
+```
+
+
+```{r}
+f02=function(x,a) {
+  y=x+1+a
+  y^2
+}
+
+f02(3)
+f02(3,4)
+
+
+
+```
+
+```{r}
+a=2
+f02(3)
+```
+
+```{r}
+a=2
+f03=function(x) {
+  y=x+1+a
+  y^2
+}
+
+f03(3)
+
+```
+
+```{r}
+a=4
+f03(3)
+
+a=6
+f03(3)
+
+```
+
+
+
+
+```{r}
+f04=function(x=5,a=0){
+  y=x+1+2*a
+  y^2
+}
+f04()
+f04(10)
+f04(a=10)
+```
+
+
+
+
+```{r}
+f2 <- function(x = z) {
+  z <- 100
+  x
+}
+f2()
+```
+
