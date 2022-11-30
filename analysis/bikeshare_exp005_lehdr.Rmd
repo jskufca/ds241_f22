@@ -1,6 +1,6 @@
 ---
 title: "Accessing LEHD data"
-date:  "2022-28-09"
+date:  "2022-11-28"
 author: "Coach Skufca"
 output: html_notebook
 ---
@@ -56,14 +56,21 @@ We will apply some of the ideas from the vignette:
 
 https://cran.r-project.org/web/packages/lehdr/vignettes/getting_started.html
 
+One of the additional resources specified is this document which describes all of the variables in the data:
+
+https://lehd.ces.census.gov/data/lodes/LODES7/LODESTechDoc7.5.pdf
+
 
 ## Proof of concept
+
+*Taking material and code directly from the vignette:*
+
 
 This first example pulls the Oregon (state = "or") 2014 (year = 2014), origin-destination (lodes_type = "od"), all jobs including private primary, secondary, and Federal (job_type = "JT01"), all jobs across ages, earnings, and industry (segment = "S000"), aggregated at the Census Tract level rather than the default Census Block (agg_geo = "tract").
 
 
 ```{r}
-or_od <- grab_lodes(state = "or", year = 2014, lodes_type = "od", job_type = "JT01", 
+or_od <- grab_lodes(state = "or", year = 2014, lodes_type = "od", job_type = "JT00", 
            segment = "S000", state_part = "main", agg_geo = "tract")
 
 head(or_od)
@@ -87,14 +94,16 @@ Other common uses might include retrieving Residential or Work Area Characterist
 
 ## Some DC data:
 
-Let's get loades for DC.
+Let's get lodes for DC.
 
 We will use `state_part="aux"` so that we get people working in DC who don't live there.
+
+We look at JT01 (primary job - the job that provides each person with the most earnings.)
 
 
 ```{r}
 dc_od <- grab_lodes(state ="dc", year = 2019, lodes_type = "od", job_type = "JT01", 
-           segment = "S000", state_part = "aux", agg_geo = "tract")
+           segment = "S000", state_part = "aux", agg_geo = "tract",use_cache=TRUE)
 
 head(dc_od)
 ```
@@ -109,6 +118,9 @@ sum(dc_od$S000)
 
 
 Let's pull only workplace associate dataset:
+
+* "wac" aggegates jobs based on job location
+* "rac" aggreates worker based on their home location.
 
 ```{r}
 dc_wac <- grab_lodes(state = c("dc"), year = 2019, lodes_type = "wac", job_type = "JT00", 
@@ -127,7 +139,7 @@ sum(dc_wac$C000)
 sum(dc_rac$C000)
 ```
 
-
+Note the difference between the two sums --- # or workers vs # of workers who live in that area.
 
 ## Get some data from tidycensus using census tracts
 
@@ -158,10 +170,29 @@ df_cens=df_census %>% rename(val=estimate) %>%
               values_from = c("val","moe")) %>%
   clean_names()
 
+
+tmap_mode("view")
 tm_shape(df_cens) +tm_polygons("val_total_pop",alpha=.5)
 ```
 
+### An interesting anomoly
+
+Note that the two datasets give different answers for number of workers living in the area.
+
+Partly 
+```{r}
+sum(df_cens$val_worker_living)
+sum(dc_rac$C000)
+```
+
+This difference may be due to differences in accounting (as some people are not counted in the LODES data).
+
+But ... we will ignore that discrency for now.
+
+
 ### Merge census and lodes data
+
+By joining wac data to census data, we now have a dataframe will all the data AND the geometry by tract.
 
 ```{r}
 df_c=df_cens %>% left_join(dc_wac,by=c("geoid"="w_tract"))
@@ -170,13 +201,29 @@ df_c=df_cens %>% left_join(dc_wac,by=c("geoid"="w_tract"))
 
 ##  Some viz
 
+I build here some vizualizations that I found interesting.  The first looks at where men work vs where women work.
+
 ```{r}
-df_c %>% select(pop=val_total_pop, workers=C000,workers_living=val_worker_living) %>%
-  tm_shape()+tm_polygons(c("pop","workers","workers_living"),alpha=.4)
+df_c1=df_c %>% select(pop=val_total_pop, men=CS01,women=CS02) %>% #renames while selecting
+  mutate(ratio=women/men)
+
+
+df_c1%>%
+  tm_shape()+tm_polygons(c("pop","men","women"),alpha=.4)
+
+
+
+
 ```
 
+And below, we simply examine the ratio between those groups.
 
+```{r}
+df_c1%>%
+  tm_shape()+tm_polygons(c("ratio"),alpha=.4)
+```
 
+A third vizualization looks at racial/ethnic differences where workers work.
 
 ```{r}
 df_c %>% select(white_workers=CR01, black_workers=CR02,hispanic_workers=CT02) %>%
