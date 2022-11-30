@@ -55,17 +55,11 @@ I will use the GeoJSON file.  (Newer, not necessarily better, but ... a single f
 Data is easily readable 
 ```{r}
 neigh=st_read(here("data_raw","dc_neigh.geojson")) %>% clean_names() %>%
-   mutate(shapearea=st_area(neigh))
+   mutate(shapearea=st_area(geometry))
 class(neigh)
 
 
 ```
-
-```{r}
-plot(neigh)
-```
-
-
 
 ## Reminder - Joins
 
@@ -115,7 +109,7 @@ neigh2=neigh %>% left_join(neigh_temp)
 
 tmap_mode("view")
 
-tm_shape(neigh2) +tm_polygons("n",alpha=.5,n=6)
+tm_shape(neigh2) +tm_polygons("n",alpha=.5,n=4,style="quantile")
 ```
 
 
@@ -130,7 +124,7 @@ Let's get some data using `tidycensus`.  Need an API key   https://api.census.go
 census_api_key("4c7e5b613afdf7d2fd6d80005f53282c9a7c1bae")
 
 #what variables
-v20 = load_variables(2018,"acs5")
+v20 = load_variables(2020,"acs5",cache=TRUE)
 # median_family_income="	B06011_001" 
 # all "B00001_001"	
 #black "B02009_001"
@@ -139,13 +133,52 @@ v20 = load_variables(2018,"acs5")
 
 Get some data:
 
-```{r}
+
+Old code:
+
+```{r eval=FALSE, include=FALSE}
 df_cencus=get_acs(geography = "tract",
                   variables=c("median_inc"="B06011_001",
                               "pop"="B01001_001",
                               "pop_black"="B02009_001"),
                   state="DC",geometry=TRUE,year=2018) 
 ```
+
+
+
+
+New code, trying to get at daytime population:
+
+Guidance taken from: https://www.census.gov/topics/employment/commuting/guidance/calculations.html
+
+
+We will use method 2:
+
+commutter_adjusted_pop = `total residents` +`total workers working in area` - `total workers living in area`
+
+
+From page https://www.census.gov/topics/employment/commuting/guidance/calculations/acs-tables.html
+
+census.gov suggests some specific variables.
+
+
+
+
+```{r}
+df_cencus=get_acs(geography = "tract",
+                  variables=c(
+                              "total_pop"="B01003_001",
+                              "worker_working"="08406_001",
+                              "worker_living"="B08301_001"),
+                  state="DC",geometry=TRUE,year=2020) 
+```
+```{r}
+dfc2=get_acs(geography = "tract",
+                 table="B08406",
+                  state="DC",geometry=TRUE,year=2020) 
+```
+
+
 
 ```{r}
 class(df_cencus)
@@ -154,6 +187,8 @@ plot(df_cencus)
 It's in long format.  Let's make it wide.
 ```{r}
 df_cens=df_cencus %>% select(-moe) %>% spread(variable,estimate) 
+
+plot(df_cens)
 
 tm_shape(df_cens) +tm_polygons("median_inc",alpha=.5)
 ```
