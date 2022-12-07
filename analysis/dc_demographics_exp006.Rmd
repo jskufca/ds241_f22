@@ -1,0 +1,201 @@
+---
+title: "DC Demographics: race, neighborhood, income"
+subtitle:  "Experiment 006"
+date:  "2022-12-07"
+author: "Coach Skufca"
+output: html_notebook
+---
+
+This notebooks intends to conduct some initial evaluation of the relationship between race, neighborhood, and income in DC.
+
+# Resources 
+
+## Packages
+
+Standards:
+
+```{r}
+library(knitr)
+library(tidyverse)
+library(janitor)
+library(lubridate) # because we will probably see some dates
+library(here) # a package I haven't taught you about before that doesn't do much, but ....
+```
+
+Some additional packages focused on today's work:
+
+```{r}
+library(sf) # working with simple features - geospatial
+library(tmap)
+library(tidycensus)
+
+```
+## Informational resources
+
+* An overall resource on mapping in R: https://bookdown.org/nicohahn/making_maps_with_r5/docs/introduction.html
+* A starting point to learn about `sf`:  https://r-spatial.github.io/sf/articles/
+* Getting started with `tmap`: https://cran.r-project.org/web/packages/tmap/vignettes/tmap-getstarted.html
+* The `tidycensus` package: https://walker-data.com/tidycensus/index.html
+* The book on `tidycensus` : https://walker-data.com/census-r/index.html
+
+# Data
+
+## Using the Neighborhood Geospatial Data (using /data)
+
+
+Our first data source comes from opendata.dc
+
+https://opendata.dc.gov/datasets/DCGIS::dc-health-planning-neighborhoods/about
+
+
+I will use the GeoJSON file.  (Newer, not necessarily better, but ... a single file.  Not smaller, but ... this one is not big.)  
+
+Data is easily readable 
+```{r}
+neigh=st_read(here("data_raw","dc_neigh.geojson")) %>% clean_names()
+class(neigh)
+```
+
+
+## Census Bureau data
+
+Let's get some data using `tidycensus`.  Need an API key   https://api.census.gov/data/key_signup.html
+
+I intend to start with 2019 data (even though it is dated) as I think the dataset is more complete.
+
+
+```{r}
+
+
+census_api_key("4c7e5b613afdf7d2fd6d80005f53282c9a7c1bae")
+
+#what variables
+v20 = load_variables(2019,"acs5")
+# median_family_income="	B06011_001" 
+# all "B00001_001"	
+#black "B02009_001"
+```
+
+Get some data, at the level of census tract: 
+
+* median income
+* total population
+* black population
+
+
+
+```{r}
+df_cencus=get_acs(geography = "tract",
+                  variables=c("median_inc"="B06011_001",
+                              "pop"="B01001_001",
+                              "pop_black"="B02009_001"),
+                  state="DC",geometry=TRUE,year=2019) 
+```
+
+
+It's in long format.  Let's make it wide and then test that we can plot the data.
+```{r}
+df_cens=df_cencus %>% select(-moe) %>% spread(variable,estimate) 
+
+tm_shape(df_cens) +tm_polygons("median_inc",alpha=.5)
+```
+## Data Aggregation
+
+DC Neighborhoods was constructed by DC Government as a way to reasonably aggregate,
+where reasonable is meant to capture demographic elements.  So we will aggregate the census data by neighborhood.
+
+The plot below shows the difference between census tracts (red) and neighborhoods (blue).
+
+```{r}
+
+  tm_shape(neigh) +tm_borders(col="blue",lwd=5,alpha=.2)+
+  tm_shape(df_cens) +tm_borders(col="red",lwd=1,alpha=.3)
+```
+
+To merge, we must use a consistent coordinate system, and then we join the datasets.
+
+```{r}
+df_cens_adj=df_cens %>% st_transform(4326)
+df_j=st_join(df_cens_adj,neigh,largest=TRUE)
+```
+
+Since we want the geometry for the NEIGHBORHOODS, we need a to work a little harder, because we want to summarise in an intelligent way.
+
+```{r}
+df1=df_j %>% select(median_inc,pop,pop_black,objectid) %>%
+  group_by(objectid) %>%
+  summarise(pop_n=sum(pop),
+            pop_black_n=sum(pop_black), 
+            adj_median_income=sum(pop*median_inc)/pop_n) 
+
+
+```
+
+We then join, using geometry only from neighborhood dataset.
+
+We also compute a variable to represent 
+percentage of population that is black in each neighborhood.
+
+```{r}
+#df2=left_join(neigh2,df1)
+
+df2=left_join(neigh,df1 %>% st_set_geometry(NULL))%>% 
+  mutate(black_perc=pop_black_n/pop_n)
+```
+
+
+
+
+```{r}
+df2=df2 
+tm_shape(df2)+tm_polygons(c("adj_median_income","black_perc"))
+```
+
+# Analysis
+
+The map above give some hint of negative correlation between income and black population.
+
+We investigate directly:
+
+```{r}
+df2 %>% ggplot(aes(black_perc, adj_median_income)) + 
+  geom_point() + geom_smooth(method="lm")+
+  theme_minimal()
+```
+
+There appears to be a pretty clear relationship, but we note that we can't really identify
+and causality.
+
+
+We might wonder if looking at the level of census tract provides a different interpretation:
+
+```{r}
+df_cens %>% ggplot(aes(pop_black/pop, median_inc)) + 
+  geom_point() + geom_smooth(method="lm")+
+  theme_minimal()
+```
+
+We note that the regression line remains almost the same, but we do see (perhaps) bit more data scatter.   
+
+
+### Are people separated by race, or are they separating by income?
+
+Let's consider new variables:
+
+* B19013A_001 - median household income, white alone
+* B19013B_001 - median household income, black alone
+
+```{r}
+df_cenc3=get_acs(geography = "tract",
+                  variables=c("median_inc"="B06011_001",
+                              "pop"="B01001_001",
+                              "pop_black"="B02009_001",
+                              "med_inc_white"="B19013A_001",
+                              "med_inc_black"="B19013B_001"),
+                  state="DC",geometry=TRUE,year=2019) 
+```
+
+```{r}
+
+```
+
